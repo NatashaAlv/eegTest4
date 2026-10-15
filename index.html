@@ -1,0 +1,223 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EEG Signal Game</title>
+
+  <style>
+    /* BASIC STYLING — CUSTOMIZE THIS LATER */
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #10101a;
+      color: white;
+      text-align: center;
+    }
+
+    header {
+      padding: 20px;
+    }
+
+    canvas {
+      display: block;
+      width: 90%;
+      max-width: 800px;
+      height: 400px;
+      margin: auto;
+      border: 1px solid #444;
+    }
+
+    .controls {
+      padding: 20px;
+    }
+
+    input {
+      width: 250px;
+      max-width: 80%;
+    }
+
+    button {
+      padding: 10px 16px;
+      margin: 8px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Signal Game</h1>
+    <p>Experiment 4: Can a signal control a game?</p>
+    <p>Score: <span id="score">0</span></p>
+  </header>
+
+  <canvas id="game" width="800" height="400"></canvas>
+
+  <div class="controls">
+    <p>Input mode: <strong id="mode">Simulated</strong></p>
+
+    <button id="autoButton">Turn Auto Mode Off</button>
+    <button id="resetButton">Reset Game</button>
+
+    <p>Signal Value: <span id="value">50</span></p>
+
+    <input
+      id="signal"
+      type="range"
+      min="0"
+      max="100"
+      value="50"
+    >
+
+    <p>Move the slider to move the ball up and down.</p>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    const slider = document.getElementById("signal");
+    const valueText = document.getElementById("value");
+    const scoreText = document.getElementById("score");
+    const autoButton = document.getElementById("autoButton");
+    const resetButton = document.getElementById("resetButton");
+    const modeText = document.getElementById("mode");
+
+    let signal = 50;
+    let autoMode = true;
+    let score = 0;
+    let time = 0;
+    let rings = [];
+    let lastRing = 0;
+
+    const ball = {
+      x: 100,
+      y: 200,
+      radius: 12
+    };
+
+    function updateSignal(newValue) {
+      signal = Number(newValue);
+      slider.value = signal;
+      valueText.textContent = signal;
+
+      // High input moves the ball upward
+      ball.y = canvas.height - 30 -
+        (signal / 100) * (canvas.height - 60);
+    }
+
+    slider.addEventListener("input", () => {
+      autoMode = false;
+      autoButton.textContent = "Turn Auto Mode On";
+      modeText.textContent = "Manual / Simulated";
+      updateSignal(slider.value);
+    });
+
+    autoButton.addEventListener("click", () => {
+      autoMode = !autoMode;
+
+      autoButton.textContent = autoMode
+        ? "Turn Auto Mode Off"
+        : "Turn Auto Mode On";
+
+      modeText.textContent = autoMode
+        ? "Simulated"
+        : "Manual / Simulated";
+    });
+
+    resetButton.addEventListener("click", () => {
+      score = 0;
+      rings = [];
+      time = 0;
+      lastRing = 0;
+      scoreText.textContent = score;
+      updateSignal(50);
+    });
+
+    function createRing() {
+      rings.push({
+        x: canvas.width + 20,
+        y: 40 + Math.random() * (canvas.height - 80),
+        radius: 20,
+        counted: false
+      });
+    }
+
+    function animate() {
+      time++;
+
+      // Simulate a changing signal
+      if (autoMode) {
+        updateSignal(
+          50 + 40 * Math.sin(time * 0.025)
+        );
+      }
+
+      // Background
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "#18182a";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Spawn a ring periodically
+      if (time - lastRing > 100) {
+        createRing();
+        lastRing = time;
+      }
+
+      // Draw and move rings
+      rings.forEach((ring) => {
+        ring.x -= 3;
+
+        ctx.beginPath();
+        ctx.arc(
+          ring.x,
+          ring.y,
+          ring.radius,
+          0,
+          Math.PI * 2
+        );
+
+        ctx.strokeStyle = "#9b83ff";
+        ctx.lineWidth = 4;
+        ctx.stroke();
+
+        // Award a point when the ball passes through a ring
+        if (!ring.counted && ring.x < ball.x) {
+          ring.counted = true;
+
+          const distance = Math.abs(ball.y - ring.y);
+
+          if (distance < ring.radius + ball.radius) {
+            score++;
+            scoreText.textContent = score;
+          }
+        }
+      });
+
+      // Remove rings that have left the screen
+      rings = rings.filter((ring) => ring.x > -30);
+
+      // Draw player ball
+      ctx.beginPath();
+      ctx.arc(
+        ball.x,
+        ball.y,
+        ball.radius,
+        0,
+        Math.PI * 2
+      );
+
+      ctx.fillStyle = "#62f4ff";
+      ctx.fill();
+
+      requestAnimationFrame(animate);
+    }
+
+    updateSignal(50);
+    animate();
+  </script>
+</body>
+</html>
